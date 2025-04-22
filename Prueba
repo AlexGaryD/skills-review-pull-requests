@@ -1,0 +1,70 @@
+import requests
+
+# Configuración
+GITHUB_TOKEN = "tu_token_personal"
+REPO_OWNER = "AlexGaryD"
+REPO_NAME = "skills-review-pull-requests"
+BASE_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
+
+# Función para obtener solicitudes de extracción abiertas
+def get_open_pull_requests():
+    url = f"{BASE_URL}/pulls"
+    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error al obtener PRs: {response.status_code}")
+        return []
+
+# Función para verificar conflictos en una solicitud de extracción
+def check_merge_conflicts(pr_number):
+    url = f"{BASE_URL}/pulls/{pr_number}/merge"
+    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 204:
+        return False  # Sin conflictos
+    elif response.status_code == 409:
+        return True  # Conflictos detectados
+    else:
+        print(f"Error al verificar conflictos: {response.status_code}")
+        return None
+
+# Función para listar archivos modificados en una solicitud de extracción
+def get_changed_files(pr_number):
+    url = f"{BASE_URL}/pulls/{pr_number}/files"
+    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return [file["filename"] for file in response.json()]
+    else:
+        print(f"Error al obtener archivos: {response.status_code}")
+        return []
+
+# Ejecución principal
+if __name__ == "__main__":
+    prs = get_open_pull_requests()
+    if prs:
+        for pr in prs:
+            pr_number = pr["number"]
+            pr_title = pr["title"]
+            print(f"PR #{pr_number}: {pr_title}")
+
+            # Verificar conflictos
+            has_conflicts = check_merge_conflicts(pr_number)
+            if has_conflicts is None:
+                print("No se pudo determinar si hay conflictos.")
+            elif has_conflicts:
+                print("Conflictos detectados.")
+            else:
+                print("Sin conflictos.")
+
+            # Listar archivos modificados
+            changed_files = get_changed_files(pr_number)
+            if changed_files:
+                print("Archivos modificados:")
+                for file in changed_files:
+                    print(f"  - {file}")
+            print("-" * 40)
+    else:
+        print("No hay solicitudes de extracción abiertas.")
